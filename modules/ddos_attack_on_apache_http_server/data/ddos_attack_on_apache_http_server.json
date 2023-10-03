@@ -1,0 +1,150 @@
+{
+  "name": "ddos_attack_on_apache_http_server",
+  "description": "This incident type refers to a distributed denial-of-service (DDoS) attack on an Apache HTTP server. In a DDoS attack, a large number of requests are sent to the server, overwhelming its capacity to respond to legitimate requests. This can cause the server to become inaccessible to users and disrupt normal operations. Apache HTTP Server is a popular open-source web server software used by millions of websites, making it a common target for cyber attacks.",
+  "params": [
+    {
+      "name": "MAX_CONNECTIONS",
+      "value": ""
+    },
+    {
+      "name": "RATE_INTERVAL",
+      "value": ""
+    },
+    {
+      "name": "MAX_REQUESTS",
+      "value": ""
+    },
+    {
+      "name": "INTERFACE",
+      "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "value": ""
+    },
+    {
+      "name": "K8S_CLUSTER_NAME",
+      "value": ""
+    },
+    {
+      "name": "NAMESPACE",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## DDoS Attack on Apache HTTP Server.\nThis incident type refers to a distributed denial-of-service (DDoS) attack on an Apache HTTP server. In a DDoS attack, a large number of requests are sent to the server, overwhelming its capacity to respond to legitimate requests. This can cause the server to become inaccessible to users and disrupt normal operations. Apache HTTP Server is a popular open-source web server software used by millions of websites, making it a common target for cyber attacks."
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if Apache HTTP Server is running"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `systemctl status apache2`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check Apache HTTP Server logs for any suspicious requests"
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `tail -f /var/log/apache2/access.log`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Show connections per IP address to the web server"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `netstat -ntu | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -n`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Show which network interfaces are receiving the most traffic"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `iftop -i ${INTERFACE}`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Show the top 10 IP addresses with the most connections to the server"
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `netstat -ntu | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -nr | head`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Show the top 10 IPs with the most requests to the server"
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `cat /var/log/apache2/access.log | awk '{print $1}' | sort | uniq -c | sort -nr | head`"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if there are any open connections to the server"
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `netstat -an | grep :80 | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -n`"
+    },
+    {
+      "name": "cell_16",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if there are any SYN packets flooding the server"
+    },
+    {
+      "name": "cell_17",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `tcpdump -i ${INTERFACE} 'tcp[tcpflags] & tcp-syn != 0' | wc -l`"
+    },
+    {
+      "name": "cell_18",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Implement rate limiting: Implement rate-limiting to limit the number of requests a single IP address can make to the server."
+    },
+    {
+      "name": "cell_19",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_apache_rate_limit($MAX_CONNECTIONS, $RATE_INTERVAL, $MAX_REQUESTS)"
+    }
+  ]
+}
